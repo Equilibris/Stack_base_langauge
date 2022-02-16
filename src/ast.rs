@@ -5,41 +5,43 @@ use crate::tokenizer::Token;
 use std::slice::Iter;
 use std::str::FromStr;
 
+#[derive(Debug)]
 pub enum TopLevelNode {
-    Comment(String), // ~
-
     WordDeclare(String, ASTNode),       // @ident {expr}
     Typing(String, Vec<TypingASTNode>), // ?ident type
 }
-
+#[allow(dead_code)]
+#[derive(Debug)]
 pub enum ASTNode {
     Curly(Vec<ASTNode>),
     Square(Vec<ASTNode>),
 
-    Comment(String),
     Ident(String),
     NumericLiteral(NumericLiteral),
-    CharLiteral(char),
     StringLiteral(String),
 
-    DecTyped(String, Vec<TypingASTNode>), // value ::variable:type | value ::CONST:type
-    Dec(String),                          // value ::variable | value ::CONST
-    DecPointerSized(String, Vec<ASTNode>), // :#pointer[size]
-    DecPointerVariable(String),           // size :#pointer[]
-    DecPointer(String),                   // value :#pointer
-    Assign(String),                       // value $:variables
-    IndexAssign(String, Vec<ASTNode>),    // value $:pointer[index]
-    Address(String),                      // #pointerOrVariable
-    ReadAddress(String),                  // $pointerOrVariable
+    Dec(String), // value ::variable | value ::CONST
 
     // TODO
-    PointerAssign(String), // value $:#{single stack entry expression}
+    DecArraySized(String, NumericLiteral), // :#pointer[size]
+    DecTyped(String, TypeComponent),       // value ::variable:type | value ::CONST:type
+    DecArrayVariable(String),              // size :#pointer[]
+    DecPointer(String),                    // value :#pointer
+    PointerAssign(String),                 // value $:#{single stack entry expression}
+    Assign(String),                        // value :variables
+    IndexAssign(String),                   // value index $:pointer[]
+    Address(String),                       // #pointerOrVariable
+    ReadAddress(String),                   // $pointerOrVariable
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
 pub enum TypingASTNode {
-    Push(Vec<TypeComponent>),
-    Pop(Vec<TypeComponent>),
+    Push(TypeComponent),
+    Pop(TypeComponent),
 }
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct TypeComponent {
     variable: Option<String>,
     type_name_components: Vec<String>,
@@ -49,7 +51,6 @@ pub struct TypeComponent {
 
 #[derive(Debug)]
 pub enum FoldedStreamNode {
-    Comment(String),
     Ident(String),
     NumericLiteral(String),
     CharLiteral(char),
@@ -68,23 +69,24 @@ fn fold_until_sqend(stream: &mut Iter<Token>) -> Vec<FoldedStreamNode> {
     let mut out = Vec::new();
 
     while let Some(x) = stream.next() {
+        use FoldedStreamNode::*;
         out.push(match x {
-            Token::Square(true) => FoldedStreamNode::Square(fold_until_sqend(stream)),
-            Token::Curly(true) => FoldedStreamNode::Curly(fold_until_cuend(stream)),
+            Token::Square(true) => Square(fold_until_sqend(stream)),
+            Token::Curly(true) => Curly(fold_until_cuend(stream)),
 
             Token::Square(false) => break,
             Token::Curly(false) => panic!("missmatch perens"),
 
-            Token::Comment(x) => FoldedStreamNode::Comment(x.clone()),
-            Token::Ident(x) => FoldedStreamNode::Ident(x.clone()),
-            Token::NumericLiteral(x) => FoldedStreamNode::NumericLiteral(x.clone()),
-            Token::CharLiteral(x) => FoldedStreamNode::CharLiteral(x.clone()),
-            Token::StringLiteral(x) => FoldedStreamNode::StringLiteral(x.clone()),
-            Token::Dollar => FoldedStreamNode::Dollar,
-            Token::Colon => FoldedStreamNode::Colon,
-            Token::Octothorp => FoldedStreamNode::Octothorp,
-            Token::AtSign => FoldedStreamNode::AtSign,
-            Token::QMark => FoldedStreamNode::QMark,
+            Token::Comment(_) => continue,
+            Token::Ident(x) => Ident(x.clone()),
+            Token::NumericLiteral(x) => NumericLiteral(x.clone()),
+            Token::CharLiteral(x) => CharLiteral(*x),
+            Token::StringLiteral(x) => StringLiteral(x.clone()),
+            Token::Dollar => Dollar,
+            Token::Colon => Colon,
+            Token::Octothorp => Octothorp,
+            Token::AtSign => AtSign,
+            Token::QMark => QMark,
         })
     }
 
@@ -94,23 +96,24 @@ fn fold_until_cuend(stream: &mut Iter<Token>) -> Vec<FoldedStreamNode> {
     let mut out = Vec::new();
 
     while let Some(x) = stream.next() {
+        use FoldedStreamNode::*;
         out.push(match x {
-            Token::Square(true) => FoldedStreamNode::Square(fold_until_sqend(stream)),
-            Token::Curly(true) => FoldedStreamNode::Curly(fold_until_cuend(stream)),
+            Token::Square(true) => Square(fold_until_sqend(stream)),
+            Token::Curly(true) => Curly(fold_until_cuend(stream)),
 
             Token::Square(false) => panic!("missmatch perens"),
             Token::Curly(false) => break,
 
-            Token::Comment(x) => FoldedStreamNode::Comment(x.clone()),
-            Token::Ident(x) => FoldedStreamNode::Ident(x.clone()),
-            Token::NumericLiteral(x) => FoldedStreamNode::NumericLiteral(x.clone()),
-            Token::CharLiteral(x) => FoldedStreamNode::CharLiteral(x.clone()),
-            Token::StringLiteral(x) => FoldedStreamNode::StringLiteral(x.clone()),
-            Token::Dollar => FoldedStreamNode::Dollar,
-            Token::Colon => FoldedStreamNode::Colon,
-            Token::Octothorp => FoldedStreamNode::Octothorp,
-            Token::AtSign => FoldedStreamNode::AtSign,
-            Token::QMark => FoldedStreamNode::QMark,
+            Token::Comment(_) => continue,
+            Token::Ident(x) => Ident(x.clone()),
+            Token::NumericLiteral(x) => NumericLiteral(x.clone()),
+            Token::CharLiteral(x) => CharLiteral(x.clone()),
+            Token::StringLiteral(x) => StringLiteral(x.clone()),
+            Token::Dollar => Dollar,
+            Token::Colon => Colon,
+            Token::Octothorp => Octothorp,
+            Token::AtSign => AtSign,
+            Token::QMark => QMark,
         })
     }
 
@@ -122,106 +125,154 @@ pub fn fold_stream(stream: Vec<Token>) -> Vec<FoldedStreamNode> {
     let mut stream = stream.iter();
 
     while let Some(x) = stream.next() {
+        use FoldedStreamNode::*;
         out.push(match x {
-            Token::Square(true) => FoldedStreamNode::Square(fold_until_sqend(&mut stream)),
-            Token::Curly(true) => FoldedStreamNode::Curly(fold_until_cuend(&mut stream)),
+            Token::Square(true) => Square(fold_until_sqend(&mut stream)),
+            Token::Curly(true) => Curly(fold_until_cuend(&mut stream)),
 
             Token::Square(false) => panic!("missmatch perens"),
             Token::Curly(false) => panic!("missmatch perens"),
 
-            Token::Comment(x) => FoldedStreamNode::Comment(x.clone()),
-            Token::Ident(x) => FoldedStreamNode::Ident(x.clone()),
-            Token::NumericLiteral(x) => FoldedStreamNode::NumericLiteral(x.clone()),
-            Token::CharLiteral(x) => FoldedStreamNode::CharLiteral(x.clone()),
-            Token::StringLiteral(x) => FoldedStreamNode::StringLiteral(x.clone()),
-            Token::Dollar => FoldedStreamNode::Dollar,
-            Token::Colon => FoldedStreamNode::Colon,
-            Token::Octothorp => FoldedStreamNode::Octothorp,
-            Token::AtSign => FoldedStreamNode::AtSign,
-            Token::QMark => FoldedStreamNode::QMark,
+            Token::Comment(_) => continue,
+            Token::Ident(x) => Ident(x.clone()),
+            Token::NumericLiteral(x) => NumericLiteral(x.clone()),
+            Token::CharLiteral(x) => CharLiteral(x.clone()),
+            Token::StringLiteral(x) => StringLiteral(x.clone()),
+            Token::Dollar => Dollar,
+            Token::Colon => Colon,
+            Token::Octothorp => Octothorp,
+            Token::AtSign => AtSign,
+            Token::QMark => QMark,
         })
     }
 
     out
 }
 
-type FoldedStream<'a> = std::iter::Peekable<Iter<'a, FoldedStreamNode>>;
+type FoldedStream = std::iter::Peekable<std::vec::IntoIter<FoldedStreamNode>>;
 
-pub fn fold_to_node(node: &mut FoldedStream) -> anyhow::Result<ASTNode> {
-    if let Some(&x) = node.next() {
-        Ok(match x {
-            FoldedStreamNode::Square(values) => {
-                let mut out = Vec::with_capacity(values.len());
+impl ASTNode {
+    pub fn new(node: &mut FoldedStream) -> anyhow::Result<ASTNode> {
+        if let Some(x) = node.next() {
+            Ok(match x {
+                FoldedStreamNode::Square(values) => {
+                    let mut out = Vec::with_capacity(values.len());
 
-                let mut values: FoldedStream = values.iter().peekable();
+                    let mut values: FoldedStream = values.into_iter().peekable();
 
-                while let Some(x) = values.peek() {
-                    out.push(fold_to_node(&mut values)?);
+                    while let Some(_) = values.peek() {
+                        out.push(ASTNode::new(&mut values)?);
+                    }
+
+                    ASTNode::Square(out)
+                }
+                FoldedStreamNode::Curly(values) => {
+                    let mut out = Vec::with_capacity(values.len());
+
+                    let mut values: FoldedStream = values.into_iter().peekable();
+
+                    while let Some(_) = values.peek() {
+                        out.push(ASTNode::new(&mut values)?);
+                    }
+
+                    ASTNode::Curly(out)
                 }
 
-                ASTNode::Square(out)
-            }
-            FoldedStreamNode::Curly(values) => {
-                let mut out = Vec::with_capacity(values.len());
-
-                let mut values: FoldedStream = values.iter().peekable();
-
-                while let Some(x) = values.peek() {
-                    out.push(fold_to_node(&mut values)?);
+                FoldedStreamNode::Ident(x) => ASTNode::Ident(x),
+                FoldedStreamNode::NumericLiteral(x) => {
+                    ASTNode::NumericLiteral(NumericLiteral::from_str(x.as_str())?)
                 }
 
-                ASTNode::Curly(out)
-            }
+                FoldedStreamNode::CharLiteral(char) => {
+                    ASTNode::NumericLiteral(NumericLiteral::Uint(char as u8, 8))
+                }
+                FoldedStreamNode::StringLiteral(s) => ASTNode::StringLiteral(s),
 
-            FoldedStreamNode::Comment(x) => ASTNode::Comment(x),
-            FoldedStreamNode::Ident(x) => ASTNode::Ident(x),
-            FoldedStreamNode::NumericLiteral(x) => {
-                ASTNode::NumericLiteral(NumericLiteral::from_str(x.as_str())?)
-            }
-            FoldedStreamNode::CharLiteral(char) => ASTNode::CharLiteral(char),
-            FoldedStreamNode::StringLiteral(s) => ASTNode::StringLiteral(s),
-
-            FoldedStreamNode::Dollar => {}
-            FoldedStreamNode::Colon => todo!(),
-            FoldedStreamNode::Octothorp => todo!(),
-            FoldedStreamNode::AtSign => todo!(),
-            FoldedStreamNode::QMark => todo!(),
-        })
-    } else {
-        bail!("Token stream empty at EOF")
+                FoldedStreamNode::Dollar => todo!(),
+                FoldedStreamNode::Colon => match (node.next(), node.next()) {
+                    (Some(FoldedStreamNode::Colon), Some(FoldedStreamNode::Ident(name))) => {
+                        ASTNode::Dec(name)
+                    }
+                    _ => bail!("Unexpected token or EOF"),
+                },
+                FoldedStreamNode::Octothorp => todo!(),
+                FoldedStreamNode::AtSign => todo!(),
+                FoldedStreamNode::QMark => todo!(),
+            })
+        } else {
+            bail!("Token stream empty at EOF")
+        }
     }
 }
 
-pub fn build_tree(stream: Vec<Token>) -> Vec<TopLevelNode> {
+pub fn parse_type_component() -> TypeComponent {
+    todo!()
+}
+pub fn parse_types(content: Vec<FoldedStreamNode>) -> anyhow::Result<Vec<TypingASTNode>> {
+    todo!()
+}
+
+pub fn build_tree(stream: Vec<Token>) -> anyhow::Result<Vec<TopLevelNode>> {
     let mut out = Vec::new();
 
     let stream = fold_stream(stream);
-    let mut stream: FoldedStream = stream.iter().peekable();
+    let mut stream: FoldedStream = stream.into_iter().peekable();
 
-    while let Some(x) = stream.peek() {
-        match x {
-            FoldedStreamNode::Comment(x) => {
-                out.push(TopLevelNode::Comment(x.clone()));
-            }
-            FoldedStreamNode::QMark => {}
-            FoldedStreamNode::AtSign => {}
+    while let Some(x) = stream.next() {
+        out.push(match x {
+            FoldedStreamNode::QMark => match (stream.next(), stream.next()) {
+                (Some(FoldedStreamNode::Ident(ident)), Some(FoldedStreamNode::Square(content))) => {
+                    TopLevelNode::Typing(ident, parse_types(content)?)
+                }
+
+                _ => bail!("Typing must be followed by ident and bracket"),
+            },
+            FoldedStreamNode::AtSign => match stream.next() {
+                Some(FoldedStreamNode::Ident(ident)) => {
+                    TopLevelNode::WordDeclare(ident, ASTNode::new(&mut stream)?)
+                }
+
+                _ => bail!("Word deceleration must be followed by ident"),
+            },
             _ => panic!("Invalid top-level deceleration"),
-        }
+        })
     }
 
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::fold_stream, tokenizer::tokenizer};
+    use crate::tokenizer::tokenizer;
+
+    use super::{build_tree, fold_stream};
 
     #[test]
-    fn experiments() {
-        let program = "@main {\"Hello world!\\n\".}";
-        let tokens = tokenizer(program.to_string()).unwrap();
-        println!("{:?}", fold_stream(tokens));
+    fn exp_fold() {
+        let program = "?main [] @main {\"Hello world!\\n\".}";
+        let program = tokenizer(program.to_string()).unwrap();
+        println!("{:?}", fold_stream(program));
     }
+
+    #[test]
+    fn exp_extract_top_level() {
+        let program = "@main{1b{\"Hello world!\\n\".}if}@other main";
+        let program = tokenizer(program.to_string()).unwrap();
+        println!("{:?}", program);
+        let program = build_tree(program).unwrap();
+        println!("{:?}", program);
+    }
+}
+
+// TODO: Compile time code compilation without proc macros
+#[macro_export]
+macro_rules! sbl_expr {
+    () => {};
+}
+
+#[macro_export]
+macro_rules! sbl_exprs {
+    () => {};
 }
 
 // Typings
@@ -243,8 +294,8 @@ mod tests {
 // pick     Pick from   -a +b
 // @        Jump        -Callable
 // .        Put         -Writeable
-// if       If          -Callable -a! +a!
-// else     Else        -Callable -a! +a!
+// if       If          -a! -Callable +a!
+// else     Else        -a! -Callable +a!
 // +        Add         -Add:a -a +a
 // -        Sub         -Sub:a -a +a
 // *        Mul         -Mul:a -a +a
@@ -255,11 +306,11 @@ mod tests {
 // <        Gt          -Ord:a -a +Bool
 
 /*
-// HELLO WORLD
+; HELLO WORLD
 ?main []
 @main { "Hello world!" . }
 
-// FIB
+; FIB
 ?fib [-a@(1 | 2) +a]
 @fib { drop 1 }
 
@@ -269,7 +320,7 @@ mod tests {
 ?main []
 @main { 10i fib . }
 
-// VECTOR ADD
+; VECTOR ADD
 ?for [-a -a -a]
 @for {}
 
@@ -278,9 +329,7 @@ mod tests {
     $:size :#array[]
 }
 
-// IF
+; IF
 
-@main {
-    1 0 = { "They are equal" . } else { "They are not equal" } if
-}
+@main { 1 0 = { "They are equal" . } if { "They are not equal" } else }
 */

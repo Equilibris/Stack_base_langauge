@@ -89,6 +89,19 @@ fn ident_tokenizer(s: &mut CharStream) -> Token {
     Token::Ident(string)
 }
 
+fn comment_tokenizer(s: &mut CharStream) -> Token {
+    let mut string = String::new();
+    while let Some(x) = s.peek() {
+        if '\n' == *x {
+            break;
+        }
+        string.push(*x);
+        s.next();
+    }
+
+    Token::Comment(string)
+}
+
 pub fn tokenizer(input: String) -> anyhow::Result<Vec<Token>> {
     let mut out = Vec::new();
 
@@ -104,23 +117,30 @@ pub fn tokenizer(input: String) -> anyhow::Result<Vec<Token>> {
             // }
         } else {
             // TODO: Comments
-            match x {
-                '$' => out.push(Token::Dollar),
-                ':' => out.push(Token::Colon),
-                '#' => out.push(Token::Octothorp),
-                '@' => out.push(Token::AtSign),
-                '?' => out.push(Token::QMark),
+            out.push(match x {
+                '$' => Token::Dollar,
+                ':' => Token::Colon,
+                '#' => Token::Octothorp,
+                '@' => Token::AtSign,
+                '?' => Token::QMark,
 
-                '{' => out.push(Token::Curly(true)),
-                '}' => out.push(Token::Curly(false)),
-                '[' => out.push(Token::Square(true)),
-                ']' => out.push(Token::Square(false)),
+                '{' => Token::Curly(true),
+                '}' => Token::Curly(false),
+                '[' => Token::Square(true),
+                ']' => Token::Square(false),
 
-                '0'..='9' | '-' => out.push(numeric_tokenize(&mut stream)),
-                '"' => out.push(string_tokenizer(&mut stream)),
-                '\'' => out.push(char_tokenizer(&mut stream)),
-                _ => out.push(ident_tokenizer(&mut stream)),
-            }
+                ';' => comment_tokenizer(&mut stream),
+                '"' => string_tokenizer(&mut stream),
+                '\'' => char_tokenizer(&mut stream),
+                '0'..='9' | '-' => {
+                    out.push(numeric_tokenize(&mut stream));
+                    continue;
+                }
+                _ => {
+                    out.push(ident_tokenizer(&mut stream));
+                    continue;
+                }
+            });
             stream.next();
         }
     }

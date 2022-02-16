@@ -1,5 +1,5 @@
 [package]
-name = "Stack_base_langauge"
+name = "stack_base_langauge"
 version = "0.1.0"
 edition = "2018"
 
@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm10-0"] }

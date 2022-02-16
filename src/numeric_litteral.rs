@@ -121,14 +121,15 @@ impl std::str::FromStr for NumericLiteral {
 
 impl ToString for NumericLiteral {
     fn to_string(&self) -> String {
+        use NumericLiteral::*;
         match *self {
-            NumericLiteral::Float(size, n) => format!("{}f{}", n, size),
-            NumericLiteral::SysUint(n) => format!("{}u", n),
-            NumericLiteral::SysInt(n) => format!("{}i", n),
-            NumericLiteral::Uint(size, n) => format!("{}u{}", n, size),
-            NumericLiteral::Int(size, n) => format!("{}i{}", n, size),
-            NumericLiteral::Boolean(true) => "1b".to_string(),
-            NumericLiteral::Boolean(false) => "0b".to_string(),
+            Float(size, n) => format!("{}f{}", n, size),
+            SysUint(n) => format!("{}u", n),
+            SysInt(n) => format!("{}i", n),
+            Uint(size, n) => format!("{}u{}", n, size),
+            Int(size, n) => format!("{}i{}", n, size),
+            Boolean(true) => "1b".to_string(),
+            Boolean(false) => "0b".to_string(),
         }
     }
 }
